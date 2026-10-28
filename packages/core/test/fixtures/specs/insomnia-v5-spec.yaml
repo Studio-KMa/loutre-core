@@ -1,0 +1,30 @@
+type: spec.insomnia.rest/5.0
+schema_version: "5.1"
+name: Boutique design
+meta:
+  id: wrk_design
+spec:
+  contents:
+    openapi: 3.0.3
+    info:
+      title: Boutique design
+      version: 1.2.0
+    paths:
+      /products:
+        get:
+          responses:
+            "200":
+              description: OK
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        price: { type: number }
+  meta:
+    id: spc_1
+collection: []

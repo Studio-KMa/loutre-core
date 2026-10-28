@@ -1,0 +1,58 @@
+/**
+ * Boutique en ligne.
+ * @title boutique-ts
+ */
+import type { Something } from "./elsewhere"
+
+export type UserStatus = "active" | "invited" | "blocked"
+
+export enum OrderStatus {
+  Pending = "pending",
+  Paid = "paid",
+  Shipped = "shipped",
+}
+
+/** Une personne qui achète chez nous. */
+export interface User {
+  id: string
+  /** Prénom et nom, tels que saisis. */
+  name: string
+  email: string
+  phone?: string
+  city: string | null
+  status: UserStatus
+  tags: string[]
+  address: Address
+  createdAt: Date
+  updatedAt: Date
+  readonly nickname?: string | undefined
+  greet(): string
+}
+
+export interface Address {
+  street: string
+  zip: string
+  city: string
+  country?: "FR" | "BE" | "CH"
+}
+
+export interface Order {
+  id: number
+  customer: User
+  items: Array<OrderLine>
+  status: OrderStatus
+  total: number
+  notes: Record<string, string>
+  meta?: { source: string; campaign?: string }
+}
+
+export interface OrderLine {
+  productName: string
+  unitPrice: number
+  quantity: number
+}
+
+export type CreateUser = Omit<User, "id" | "createdAt" | "updatedAt" | "address"> & { address?: Partial<Address> }
+export type UpdateUser = Partial<Pick<User, "name" | "phone" | "status">>
+
+const helper = (x: number) => x * 2

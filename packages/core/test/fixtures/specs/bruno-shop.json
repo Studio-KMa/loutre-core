@@ -1,0 +1,75 @@
+{
+  "name": "Boutique",
+  "version": "1",
+  "items": [
+    {
+      "type": "folder",
+      "name": "Users",
+      "items": [
+        {
+          "type": "http",
+          "name": "List users",
+          "seq": 1,
+          "request": {
+            "url": "{{baseUrl}}/users",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              { "name": "page", "value": "1", "type": "query", "enabled": true },
+              { "name": "debug", "value": "1", "type": "query", "enabled": false }
+            ],
+            "body": { "mode": "none" },
+            "docs": "Liste paginée des clients."
+          },
+          "examples": [
+            {
+              "name": "OK",
+              "response": {
+                "status": 200,
+                "statusText": "OK",
+                "headers": [],
+                "body": { "type": "json", "content": "[{\"id\": \"usr_1\", \"name\": \"Marie Dubois\", \"email\": \"marie@example.org\", \"city\": \"Bordeaux\", \"created_at\": \"2026-01-02T10:00:00Z\"}]" }
+              }
+            }
+          ]
+        },
+        {
+          "type": "http",
+          "name": "Get user",
+          "seq": 2,
+          "request": {
+            "url": "{{baseUrl}}/users/:id",
+            "method": "GET",
+            "headers": [],
+            "params": [{ "name": "id", "value": "usr_1", "type": "path", "enabled": true }],
+            "body": { "mode": "none" }
+          },
+          "examples": [
+            { "name": "Not found", "response": { "status": 404, "body": { "type": "json", "content": "{\"error\": \"not_found\"}" } } }
+          ]
+        },
+        {
+          "type": "http",
+          "name": "Create user",
+          "seq": 3,
+          "request": {
+            "url": "{{baseUrl}}/users",
+            "method": "POST",
+            "headers": [{ "name": "content-type", "value": "application/json", "enabled": true }],
+            "params": [],
+            "body": { "mode": "json", "json": "{\n  \"name\": \"Marie Dubois\",\n  \"email\": \"marie@example.org\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "type": "http",
+      "name": "Health",
+      "seq": 1,
+      "request": { "url": "{{baseUrl}}/health", "method": "GET", "headers": [], "params": [], "body": { "mode": "none" } }
+    },
+    { "type": "grpc", "name": "Stream", "request": { "url": "grpc://api.boutique.fr", "method": "shop.Orders/Stream" } }
+  ],
+  "environments": [{ "name": "local", "variables": [{ "name": "baseUrl", "value": "http://localhost:3000", "enabled": true }] }],
+  "brunoConfig": { "version": "1", "name": "Boutique", "type": "collection", "ignore": ["node_modules", ".git"] }
+}

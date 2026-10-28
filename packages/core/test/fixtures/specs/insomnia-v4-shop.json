@@ -1,0 +1,40 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-09-20T09:12:44.000Z",
+  "__export_source": "insomnia.desktop.app:v10.3.1",
+  "resources": [
+    { "_id": "wrk_shop", "parentId": null, "_type": "workspace", "name": "Boutique", "description": "Export d'exemple", "scope": "collection" },
+    { "_id": "fld_users", "parentId": "wrk_shop", "_type": "request_group", "name": "Users" },
+    { "_id": "fld_admin", "parentId": "fld_users", "_type": "request_group", "name": "Admin" },
+    { "_id": "fld_orders", "parentId": "wrk_shop", "_type": "request_group", "name": "Orders" },
+    {
+      "_id": "req_list_users", "parentId": "fld_users", "_type": "request", "name": "List users", "method": "GET",
+      "url": "{{ _.baseUrl }}/users?page=1",
+      "parameters": [{ "name": "limit", "value": "20" }, { "name": "debug", "value": "1", "disabled": true }],
+      "body": {}, "headers": []
+    },
+    {
+      "_id": "req_get_user", "parentId": "fld_users", "_type": "request", "name": "Get user", "method": "GET",
+      "url": "{{ _.baseUrl }}/users/{{ _.userId }}", "body": {}, "parameters": []
+    },
+    {
+      "_id": "req_create_user", "parentId": "fld_users", "_type": "request", "name": "Create user", "method": "POST",
+      "url": "{{ _.baseUrl }}/users",
+      "body": { "mimeType": "application/json", "text": "{\n  \"name\": \"Marie Dubois\",\n  \"email\": \"marie@example.org\",\n  \"created_at\": \"2026-01-02T10:00:00Z\",\n  \"active\": true\n}" },
+      "parameters": []
+    },
+    {
+      "_id": "req_delete_user", "parentId": "fld_admin", "_type": "request", "name": "Delete user", "method": "DELETE",
+      "url": "{{ _.baseUrl }}/users/:id", "pathParameters": [{ "name": "id", "value": "usr_1" }], "body": {}, "parameters": []
+    },
+    {
+      "_id": "req_create_order", "parentId": "fld_orders", "_type": "request", "name": "Create order", "method": "POST",
+      "url": "https://api.boutique.fr/orders",
+      "body": { "mimeType": "application/x-www-form-urlencoded", "params": [{ "name": "user_id", "value": "usr_1" }, { "name": "total", "value": "42.50" }] },
+      "parameters": []
+    },
+    { "_id": "ws_events", "parentId": "wrk_shop", "_type": "websocket_request", "name": "Events", "url": "wss://api.boutique.fr/events" },
+    { "_id": "env_base", "parentId": "wrk_shop", "_type": "environment", "name": "Base Environment", "data": { "baseUrl": "https://api.boutique.fr" } }
+  ]
+}

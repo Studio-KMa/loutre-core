@@ -1,0 +1,55 @@
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "Ouverture de la boutique",
+      "views": 120,
+      "authorId": 1,
+      "published": true
+    },
+    {
+      "id": 2,
+      "title": "Les nouveautés d'automne",
+      "views": 87,
+      "authorId": 2,
+      "published": false,
+      "tags": [
+        "mode",
+        "automne"
+      ]
+    }
+  ],
+  "comments": [
+    {
+      "id": 1,
+      "text": "Bravo !",
+      "postId": 1
+    },
+    {
+      "id": 2,
+      "text": "Hâte de voir ça",
+      "postId": 1
+    },
+    {
+      "id": 3,
+      "text": "Superbe",
+      "postId": 2
+    }
+  ],
+  "authors": [
+    {
+      "id": 1,
+      "name": "Camille Roux",
+      "email": "camille@boutique.fr"
+    },
+    {
+      "id": 2,
+      "name": "Hugo Petit",
+      "email": "hugo@boutique.fr"
+    }
+  ],
+  "profile": {
+    "name": "Boutique Loutre",
+    "city": "Lyon"
+  }
+}

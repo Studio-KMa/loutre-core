@@ -1,0 +1,10 @@
+interface Product { id: string; name: string; price: number }
+interface Page<T> { items: T[]; total: number; nextCursor?: string }
+
+type Api = {
+  "GET /products": Page<Product>
+  "GET /products/{id}": Product
+  "POST /products": { body: Omit<Product, "id">; response: Product; status: 201 }
+  "DELETE /products/:id": void
+  "GET /search": { response: Product[]; query: { q: string; limit?: number } }
+}

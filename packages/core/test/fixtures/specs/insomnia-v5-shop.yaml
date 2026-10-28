@@ -1,0 +1,63 @@
+type: collection.insomnia.rest/5.0
+schema_version: "5.1"
+name: Boutique
+meta:
+  id: wrk_4b1e3c
+  created: 1758357164000
+  modified: 1758357164000
+  description: Export d'exemple
+collection:
+  - name: Users
+    meta:
+      id: fld_91c2
+    children:
+      - url: "{{ _.baseUrl }}/users"
+        name: List users
+        meta:
+          id: req_1
+        method: GET
+        parameters:
+          - name: page
+            value: "1"
+          - name: limit
+            value: "20"
+            disabled: true
+      - url: "{{ _.baseUrl }}/users/:id"
+        name: Get user
+        meta:
+          id: req_2
+        method: GET
+        pathParameters:
+          - name: id
+            value: usr_1
+      - url: "{{ _.baseUrl }}/users"
+        name: Create user
+        meta:
+          id: req_3
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Marie Dubois",
+              "email": "marie@example.org",
+              "created_at": "2026-01-02T10:00:00Z"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+  - url: "{{ _.baseUrl }}/health"
+    name: Health
+    meta:
+      id: req_4
+    method: GET
+  - url: wss://api.boutique.fr/events
+    name: Events
+    meta:
+      id: ws-req_5
+environments:
+  name: Base Environment
+  meta:
+    id: env_1
+  data:
+    baseUrl: https://api.boutique.fr

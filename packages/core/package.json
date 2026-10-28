@@ -1,0 +1,94 @@
+{
+  "name": "@loutre-run/core",
+  "version": "0.8.0",
+  "description": "The Loutre engine: OpenAPI 3.x, Swagger 2.0, TypeScript types, Postman, Insomnia or Bruno collections, HAR files, json-server db.json, curl commands or a GraphQL schema turned into a typed route table and realistic, coherent mock data.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./detect": {
+      "types": "./src/detect.ts",
+      "default": "./src/detect.ts"
+    },
+    "./sample": {
+      "types": "./src/sample.ts",
+      "default": "./src/sample.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/fix-extensions.mjs",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "15.3.6",
+    "effect": "4.0.0",
+    "graphql": "^17.0.2",
+    "swagger2openapi": "^7.0.8",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.0",
+    "@types/node": "^24",
+    "@types/swagger2openapi": "^7.0.4",
+    "openapi-types": "^12.1.3",
+    "vitest": "^5.0.1"
+  },
+  "homepage": "https://loutre.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Studio-KMa/loutre-core.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/Studio-KMa/loutre-core/issues"
+  },
+  "keywords": [
+    "mock",
+    "api",
+    "openapi",
+    "swagger",
+    "postman",
+    "insomnia",
+    "bruno",
+    "har",
+    "json-server",
+    "curl",
+    "graphql",
+    "typescript",
+    "fake-data",
+    "msw",
+    "prism"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./detect": {
+        "types": "./dist/detect.d.ts",
+        "default": "./dist/detect.js"
+      },
+      "./sample": {
+        "types": "./dist/sample.d.ts",
+        "default": "./dist/sample.js"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+# Copié depuis l'onglet Réseau (Copy as cURL) et depuis la doc
+curl 'https://api.boutique.fr/v1/users?page=1&limit=20' \
+  -H 'accept: application/json' \
+  -H 'authorization: Bearer eyJhbGciOi...' \
+  --compressed ;
+curl 'https://api.boutique.fr/v1/users/42' -H 'accept: application/json' ;
+curl 'https://api.boutique.fr/v1/users' \
+  -H 'content-type: application/json' \
+  --data-raw $'{"name":"Léa Martin","email":"lea@example.org","plan":"pro","seats":3}'
+curl -X PATCH https://api.boutique.fr/v1/users/42 -H "Content-Type: application/json" -d '{"plan": "free"}'
+curl -X DELETE "https://api.boutique.fr/v1/users/{{userId}}"
+curl -G https://api.boutique.fr/v1/search -d q=mug -d limit=5
+curl https://api.boutique.fr/v1/orders --json '{"user_id": 42, "total": 31.4, "currency": "EUR"}'
+curl 'https://app.boutique.fr/assets/logo.svg'

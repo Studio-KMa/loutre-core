@@ -1,0 +1,20 @@
+{
+  "name": "loutre-core-workspace",
+  "private": true,
+  "description": "The Loutre engine (@loutre-run/core) and its CLI (loutre): mock APIs with realistic data from OpenAPI, TypeScript, Postman and more.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12",
+    "pnpm": ">=8"
+  },
+  "scripts": {
+    "test": "pnpm -r --if-present run test",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "build": "pnpm -F @loutre-run/core run build && pnpm -F loutre run build",
+    "check": "pnpm run typecheck && pnpm run test"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

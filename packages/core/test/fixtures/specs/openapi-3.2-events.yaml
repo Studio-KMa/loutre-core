@@ -1,0 +1,58 @@
+openapi: 3.2.0
+$self: https://api.boutique.fr/openapi.yaml
+info:
+  title: evenements-api
+  version: 2.0.0
+tags:
+  - name: Événements
+    summary: Flux et recherche
+    kind: nav
+paths:
+  /events:
+    get:
+      tags: [Événements]
+      parameters:
+        - { name: since, in: query, schema: { type: string, format: date-time } }
+        - { name: filter, in: querystring, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200":
+          summary: Les événements, en flux
+          content:
+            application/jsonl:
+              itemSchema: { $ref: "#/components/schemas/Event" }
+    query:
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { description: Recherche }
+  /events/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      responses:
+        "200":
+          description: Un événement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+              examples:
+                concert:
+                  dataValue: { id: evt_1, title: Concert au parc, city: Lyon, starts_at: "2026-10-12T19:00:00Z", price: 25 }
+                  serializedValue: '{"id":"evt_1"}'
+    additionalOperations:
+      PURGE:
+        responses:
+          "204": { description: Vidé }
+components:
+  schemas:
+    Event:
+      type: object
+      required: [id, title, city, starts_at]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        city: { type: string }
+        starts_at: { type: string, format: date-time }
+        price: { type: number, minimum: 0, maximum: 120 }

@@ -1,0 +1,57 @@
+{
+  "name": "loutre",
+  "version": "0.8.0",
+  "description": "Loutre in your terminal: serve an OpenAPI, Swagger, TypeScript, Postman, Insomnia, Bruno, HAR, json-server, curl or GraphQL description as a mock API with realistic data, or push it to loutre.run.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "loutre": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "prepack": "pnpm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "esbuild": "^0.27.0",
+    "vitest": "^5.0.1",
+    "@loutre-run/core": "workspace:*"
+  },
+  "homepage": "https://loutre.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Studio-KMa/loutre-core.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/Studio-KMa/loutre-core/issues"
+  },
+  "keywords": [
+    "mock",
+    "api",
+    "openapi",
+    "swagger",
+    "postman",
+    "insomnia",
+    "bruno",
+    "har",
+    "json-server",
+    "curl",
+    "graphql",
+    "cli",
+    "fake-data"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

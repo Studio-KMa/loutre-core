@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "Boutique",
+    "description": "Collection d'exemple",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["users"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          },
+          "response": [
+            {
+              "name": "OK",
+              "code": 200,
+              "body": "[{\"id\": \"usr_1\", \"name\": \"Marie Dubois\", \"email\": \"marie@example.org\", \"created_at\": \"2026-01-02T10:00:00Z\", \"active\": true}]"
+            }
+          ]
+        },
+        {
+          "name": "Get user",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/:id", "path": ["users", ":id"], "variable": [{ "key": "id", "value": "usr_1" }] } },
+          "response": [
+            { "name": "OK", "code": 200, "body": "{\"id\": \"usr_1\", \"name\": \"Marie Dubois\", \"email\": \"marie@example.org\", \"created_at\": \"2026-01-02T10:00:00Z\", \"active\": true}" },
+            { "name": "Not found", "code": 404, "body": "{\"error\": \"not_found\", \"message\": \"no such user\"}" }
+          ]
+        },
+        {
+          "name": "Create user",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users",
+            "body": { "mode": "raw", "raw": "{\"name\": \"Lucas Bernard\", \"email\": \"lucas@example.org\"}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "https://api.example.org/health" }
+    }
+  ]
+}

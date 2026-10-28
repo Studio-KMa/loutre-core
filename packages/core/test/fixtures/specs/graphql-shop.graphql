@@ -1,0 +1,81 @@
+# @title boutique-graphql
+"""Une boutique : clients, articles de blog, recherche."""
+scalar DateTime
+
+interface Node {
+  id: ID!
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  CUSTOMER
+}
+
+type User implements Node {
+  id: ID!
+  name: String!
+  email: String!
+  role: Role!
+  city: String
+  createdAt: DateTime!
+  posts: [Post!]!
+}
+
+type Post implements Node {
+  id: ID!
+  title: String!
+  body: String
+  authorId: ID!
+  author: User!
+  tags: [String!]!
+  publishedAt: DateTime
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type PostEdge {
+  cursor: String!
+  node: Post!
+}
+
+type PostConnection {
+  edges: [PostEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+union SearchResult = User | Post
+
+input UserInput {
+  name: String!
+  email: String!
+  role: Role
+}
+
+type CreatePostPayload {
+  post: Post
+  errors: [String!]!
+}
+
+type Query {
+  users(role: Role, first: Int, offset: Int): [User!]!
+  user(id: ID!): User
+  me: User!
+  posts(first: Int, after: String): PostConnection!
+  search(text: String!): [SearchResult!]!
+  node(id: ID!): Node
+  stats: Int!
+}
+
+type Mutation {
+  createUser(input: UserInput!): User!
+  updateUser(id: ID!, input: UserInput!): User
+  deleteUser(id: ID!): Boolean!
+  createPost(title: String!, authorId: ID!): CreatePostPayload!
+}
