@@ -198,3 +198,48 @@ describe("interprétation — formes", () => {
     })
   })
 })
+
+describe("interprétation — budget de formes", () => {
+  /** Quatre propriétés par niveau qui pointent toutes vers le niveau suivant : 4^levels formes une fois développé. */
+  const wide = (levels: number): Record<string, unknown> => {
+    let node: Record<string, unknown> = { type: "string" }
+    for (let i = 0; i < levels; i++) node = { type: "object", properties: { a: node, b: node, c: node, d: node } }
+    return node
+  }
+
+  it("une première propriété profonde laisse leur forme aux suivantes", () => {
+    const ctx = { ...makeShapeContext(new WeakMap()), budget: { remaining: 200 } }
+    const charge = toShape({ type: "object", properties: { fee: wide(6), id: { type: "string" }, status: { enum: ["paid", "failed"] }, billing: { type: "object", properties: { email: { type: "string", format: "email" } } } } }, ctx) as ObjectShape
+    const kinds = Object.fromEntries(charge.properties.map((p) => [p.name, p.shape.kind]))
+    expect(kinds).toEqual({ fee: "object", id: "string", status: "string", billing: "object" })
+    expect((charge.properties[3]!.shape as ObjectShape).properties[0]!.shape).toMatchObject({ kind: "string", format: "email" })
+  })
+
+  it.effect("l'erreur default garde sa forme derrière une grosse réponse 200", () =>
+    Effect.gen(function* () {
+      const schemas: Record<string, unknown> = {}
+      for (let i = 0; i < 9; i++) {
+        const next = i < 8 ? { $ref: `#/components/schemas/S${i + 1}` } : { type: "string" }
+        schemas[`S${i}`] = { type: "object", properties: { a: next, b: next, c: next, d: next } }
+      }
+      const document = {
+        openapi: "3.1.0",
+        info: { title: "Budget", version: "1" },
+        paths: {
+          "/customers": {
+            get: {
+              responses: {
+                "200": { description: "ok", content: { "application/json": { schema: { $ref: "#/components/schemas/S0" } } } },
+                default: { description: "erreur", content: { "application/json": { schema: { type: "object", properties: { error: { type: "object", properties: { message: { type: "string" } } } } } } } },
+              },
+            },
+          },
+        },
+        components: { schemas },
+      }
+      const t = yield* ingest(document).pipe(Effect.flatMap(normalise), Effect.flatMap(interpret))
+      const error = route(t, "get:/customers").responses.find((r) => r.status === "DEFAULT")!.shape as ObjectShape
+      expect(error.properties[0]!.shape).toMatchObject({ kind: "object", properties: [{ name: "message", shape: { kind: "string" } }] })
+    }),
+  )
+})

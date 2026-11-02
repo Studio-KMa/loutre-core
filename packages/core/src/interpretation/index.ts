@@ -22,7 +22,7 @@ import type { NormalisedSpec } from "../normalisation"
 import { entityOf, exampleShaper, inlineRegistered } from "../collections"
 import { inferSchema } from "../util/infer-schema"
 import { isPlainObject } from "../util/pointer"
-import { collectSchemaNames, isJson, makeShapeContext, toShape, type ShapeContext } from "./shape"
+import { collectSchemaNames, isJson, makeShapeContext, siblingShapes, toShape, type ShapeContext } from "./shape"
 
 const METHODS: ReadonlyArray<HttpMethod> = HttpMethod.literals
 /** Shapes a route may always use while the table budget lasts, however many routes follow. */
@@ -45,7 +45,7 @@ export const interpret = (spec: NormalisedSpec): Effect.Effect<RouteTable, Inter
     let left = entries.reduce((count, [, item]) => count + (isPlainObject(item) ? METHODS.filter((m) => isPlainObject(item[m])).length : 0), 0)
     for (const [path, item] of entries) {
       if (!isPlainObject(item)) continue
-      const pathParameters = parametersOf(item["parameters"], ctx)
+      const pathParameters = parametersOf(item["parameters"], ctx, (schema, assign) => assign(toShape(schema, ctx)))
       for (const method of METHODS) {
         const operation = item[method]
         if (!isPlainObject(operation)) continue
@@ -98,6 +98,10 @@ const infoOf = (info: unknown): ApiInfo => {
   return result
 }
 
+/** Hands a schema over to be shaped later; `assign` receives its shape. */
+type Defer = (schema: unknown, assign: (shape: DataShape) => void) => void
+const UNSHAPED: DataShape = { kind: "unknown" }
+
 const routeOf = (
   method: HttpMethod,
   path: string,
@@ -105,9 +109,17 @@ const routeOf = (
   inherited: ReadonlyArray<Parameter>,
   ctx: ShapeContext,
 ): Route => {
-  const own = parametersOf(operation["parameters"], ctx)
+  // Parameters, body and responses are shaped together, sharing the route's budget: a large success body
+  // leaves the error bodies theirs (Stripe's `default` error after a list of customers).
+  const pending: Array<readonly [unknown, (shape: DataShape) => void]> = []
+  const defer: Defer = (schema, assign) => {
+    pending.push([schema, assign])
+  }
+  const own = parametersOf(operation["parameters"], ctx, defer)
+  const requestBody = requestBodyOf(operation["requestBody"], ctx, defer)
+  const responses = responsesOf(operation["responses"], ctx, defer)
+  siblingShapes(pending.map(([schema]) => schema), ctx).forEach((shape, index) => pending[index]![1](shape))
   const parameters = mergeParameters(inherited, own, path)
-  const responses = responsesOf(operation["responses"], ctx)
   const route: { -readonly [K in keyof Route]: Route[K] } = {
     id: `${method}:${path}`,
     method,
@@ -122,12 +134,11 @@ const routeOf = (
   const description = typeof operation["description"] === "string" ? operation["description"].trim() : ""
   if (summary.length > 0) route.summary = summary
   else if (description.length > 0) route.summary = description.split("\n")[0] ?? description
-  const requestBody = requestBodyOf(operation["requestBody"], ctx)
   if (requestBody !== undefined) route.requestBody = requestBody
   return route
 }
 
-const parametersOf = (list: unknown, ctx: ShapeContext): Array<Parameter> => {
+const parametersOf = (list: unknown, ctx: ShapeContext, defer: Defer): Array<Parameter> => {
   if (!Array.isArray(list)) return []
   const out: Array<Parameter> = []
   for (const raw of list) {
@@ -139,8 +150,11 @@ const parametersOf = (list: unknown, ctx: ShapeContext): Array<Parameter> => {
       name: raw["name"],
       in: location as ParameterLocation,
       required: location === "path" ? true : raw["required"] === true,
-      shape: toShape(schema, ctx),
+      shape: UNSHAPED,
     }
+    defer(schema, (shape) => {
+      parameter.shape = shape
+    })
     if (typeof raw["description"] === "string" && raw["description"].trim().length > 0) {
       parameter.description = raw["description"].trim()
     }
@@ -260,15 +274,19 @@ const mediaExample = (media: Record<string, unknown>): Json | undefined => {
 
 const firstContentSchema = (content: unknown, ctx: ShapeContext): unknown => pickContent(content, ctx)?.schema
 
-const requestBodyOf = (raw: unknown, ctx: ShapeContext): RequestBody | undefined => {
+const requestBodyOf = (raw: unknown, ctx: ShapeContext, defer: Defer): RequestBody | undefined => {
   if (!isPlainObject(raw)) return undefined
   const picked = pickContent(raw["content"], ctx)
   if (picked === undefined) return undefined
-  return {
+  const body: { -readonly [K in keyof RequestBody]: RequestBody[K] } = {
     contentType: picked.contentType,
     required: raw["required"] === true,
-    shape: toShape(picked.schema, ctx),
+    shape: UNSHAPED,
   }
+  defer(picked.schema, (shape) => {
+    body.shape = shape
+  })
+  return body
 }
 
 const statusOrder = (status: string): number => {
@@ -277,7 +295,7 @@ const statusOrder = (status: string): number => {
   return 1000
 }
 
-const responsesOf = (raw: unknown, ctx: ShapeContext): Array<ResponseSpec> => {
+const responsesOf = (raw: unknown, ctx: ShapeContext, defer: Defer): Array<ResponseSpec> => {
   if (!isPlainObject(raw)) return []
   const keys = Object.keys(raw)
     .filter((k) => /^\d{3}$/.test(k) || /^[1-5]XX$/i.test(k) || k === "default")
@@ -293,8 +311,10 @@ const responsesOf = (raw: unknown, ctx: ShapeContext): Array<ResponseSpec> => {
       const picked = pickContent(response["content"], ctx)
       if (picked !== undefined) {
         spec.contentType = picked.contentType
-        const shape: DataShape = toShape(picked.schema, ctx)
-        spec.shape = shape
+        spec.shape = UNSHAPED
+        defer(picked.schema, (shape) => {
+          spec.shape = shape
+        })
       }
     }
     out.push(spec)

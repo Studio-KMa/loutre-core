@@ -150,6 +150,20 @@ const exampleFits = (shape: DataShape, example: Json): boolean => {
   }
 }
 
+/** Shapes of a subtree that are not `unknown`: how much of a component the shape budget left at that place. */
+const knownShapes = (shape: DataShape, memo: WeakMap<object, number>): number => {
+  const cached = memo.get(shape)
+  if (cached !== undefined) return cached
+  let count = shape.kind === "unknown" ? 0 : 1
+  if (shape.kind === "object") {
+    for (const property of shape.properties) count += knownShapes(property.shape, memo)
+    if (shape.additional !== undefined) count += knownShapes(shape.additional, memo)
+  } else if (shape.kind === "array") count += knownShapes(shape.items, memo)
+  else if (shape.kind === "union") for (const variant of shape.variants) count += knownShapes(variant, memo)
+  memo.set(shape, count)
+  return count
+}
+
 class Generator {
   private readonly root: Rng
   private readonly now: Date
@@ -158,6 +172,7 @@ class Generator {
   private readonly titled = new Map<string, ObjectShape>()
   private readonly sources: Record<string, string> = {}
   private readonly weights = new WeakMap<object, number>()
+  private readonly completeness = new WeakMap<object, number>()
   private produced = 0
 
   constructor(
@@ -195,8 +210,13 @@ class Generator {
     if (depth > MAX_DEPTH) return
     switch (shape.kind) {
       case "object":
-        if (shape.title !== undefined && !this.titled.has(shape.title) && shape.properties.length > 0) {
-          this.titled.set(shape.title, shape)
+        if (shape.title !== undefined && shape.properties.length > 0) {
+          // The same component may be cut short by the shape budget where it is nested deep (a customer inside a
+          // charge): its collection is drawn from its most complete appearance.
+          const existing = this.titled.get(shape.title)
+          if (existing === undefined || knownShapes(shape, this.completeness) > knownShapes(existing, this.completeness)) {
+            this.titled.set(shape.title, shape)
+          }
         }
         for (const property of shape.properties) this.registerTitled(property.shape, depth + 1)
         if (shape.additional !== undefined) this.registerTitled(shape.additional, depth + 1)

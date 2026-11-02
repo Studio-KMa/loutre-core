@@ -4,7 +4,7 @@ import { generateSync, type Vocabulary } from "../src/generation"
 import { ibanValid, luhnValid } from "../src/generation/values"
 import { ingest } from "../src/ingestion"
 import { interpret } from "../src/interpretation"
-import type { JsonObject, RouteTable } from "../src/model"
+import type { DataShape, JsonObject, ObjectShape, Route, RouteTable } from "../src/model"
 import { normalise } from "../src/normalisation"
 import { fixture } from "./fixtures"
 
@@ -325,5 +325,37 @@ describe("génération — specs réelles", () => {
     // Plafonnée, la pénalité ne reste pas collée au maximum.
     expect(new Set(livres.map((l) => l["montant_penalite"])).size).toBeGreaterThan(3)
     expect(String(arr(data.collections["Restaurant"])[0]!["name"])).toMatch(/^Restaurant /)
+  })
+})
+
+describe("génération — budget de formes", () => {
+  it("une entité coupée là où elle est imbriquée est servie depuis sa forme la plus complète", () => {
+    const customer = (id: DataShape, email: DataShape): ObjectShape => ({
+      kind: "object",
+      title: "Customer",
+      properties: [
+        { name: "id", required: true, shape: id },
+        { name: "email", required: true, shape: email },
+      ],
+    })
+    const get = (path: string, shape: DataShape): Route => ({
+      id: `get:${path}`,
+      method: "get",
+      path,
+      tags: [],
+      parameters: [],
+      responses: [{ status: "200", contentType: "application/json", shape }],
+      defaultStatus: 200,
+    })
+    const cut = customer({ kind: "unknown" }, { kind: "unknown" })
+    const full = customer({ kind: "string" }, { kind: "string", format: "email" })
+    const table: RouteTable = {
+      format: "openapi-3.1",
+      info: { title: "Budget" },
+      routes: [get("/charges", { kind: "object", properties: [{ name: "customer", required: true, shape: cut }] }), get("/customers", { kind: "array", items: full })],
+    }
+    const list = arr(generateSync(table, { seed: "budget", now: NOW }).bodies["get:/customers"]?.["200"])
+    expect(list[0]!["id"]).toEqual(expect.any(String))
+    expect(String(list[0]!["email"])).toContain("@")
   })
 })

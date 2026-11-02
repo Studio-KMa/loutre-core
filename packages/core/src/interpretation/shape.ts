@@ -80,6 +80,70 @@ export const toShape = (schema: unknown, ctx: ShapeContext): DataShape => {
   }
 }
 
+/**
+ * Shapes of siblings (properties, variants, members), in order. Each may use what is left but the shares of the
+ * siblings still to come, so a deep first property never leaves the next ones `unknown` (Stripe's charge expands a
+ * whole account under `application_fee`, before `id`, `currency`, `status` and `billing_details`).
+ */
+export const siblingShapes = (schemas: ReadonlyArray<unknown>, ctx: ShapeContext): Array<DataShape> => {
+  const allowances = shares(schemas.map((schema) => sizeOf(schema, new Set())), ctx.budget.remaining)
+  let reserved = allowances.reduce((sum, allowance) => sum + allowance, 0)
+  return schemas.map((schema, index) => {
+    reserved -= allowances[index]!
+    const left = ctx.budget.remaining
+    const budget = { remaining: left > 0 ? Math.max(1, left - reserved) : 0 }
+    const granted = budget.remaining
+    const shape = toShape(schema, { ...ctx, budget })
+    ctx.budget.remaining -= granted - budget.remaining
+    return shape
+  })
+}
+
+/** Fair shares of a budget: siblings that need less than an equal share get all they need, the others split the rest. */
+const shares = (sizes: ReadonlyArray<number>, budget: number): Array<number> => {
+  if (sizes.reduce((sum, size) => sum + size, 0) <= budget) return [...sizes]
+  const out = new Array<number>(sizes.length).fill(0)
+  let left = budget
+  const bySize = sizes.map((_, index) => index).sort((a, b) => sizes[a]! - sizes[b]!)
+  bySize.forEach((index, rank) => {
+    out[index] = Math.min(sizes[index]!, Math.max(1, Math.floor(left / (bySize.length - rank))))
+    left -= out[index]!
+  })
+  return out
+}
+
+/**
+ * Shapes a schema expands to, roughly: shared schemas count at each use like in `toShape`, cycles are cut, and the
+ * count stops at `MAX_SHAPES`. Remembered by identity, so a large spec is walked once.
+ */
+const knownSizes = new WeakMap<object, number>()
+const sizeOf = (schema: unknown, visiting: Set<object>): number => {
+  if (!isPlainObject(schema)) return 1
+  const known = knownSizes.get(schema)
+  if (known !== undefined) return known
+  if (visiting.has(schema)) return 1
+  visiting.add(schema)
+  let total = 1
+  for (const child of childrenOf(schema)) {
+    total = Math.min(MAX_SHAPES, total + sizeOf(child, visiting))
+    if (total === MAX_SHAPES) break
+  }
+  visiting.delete(schema)
+  knownSizes.set(schema, total)
+  return total
+}
+
+const childrenOf = (schema: Schema): Array<unknown> => {
+  const alternatives = schema["oneOf"] ?? schema["anyOf"]
+  return [
+    ...(Array.isArray(schema["allOf"]) ? schema["allOf"] : []),
+    ...(Array.isArray(alternatives) ? alternatives : []),
+    ...(isPlainObject(schema["properties"]) ? Object.values(schema["properties"]) : []),
+    ...(isPlainObject(schema["additionalProperties"]) ? [schema["additionalProperties"]] : []),
+    ...(isPlainObject(schema["items"]) ? [schema["items"]] : []),
+  ]
+}
+
 /** A shape's body; its common fields (title, description…) are set afterwards by `toShape`. */
 type ShapeBody = DataShape
 type BaseFields = {
@@ -123,13 +187,13 @@ const typesOf = (schema: Schema): Array<string> => {
 const body = (schema: Schema, ctx: ShapeContext): ShapeBody => {
   const allOf = schema["allOf"]
   if (Array.isArray(allOf) && allOf.length > 0) {
-    const members = allOf.map((m) => toShape(m, ctx))
+    const members = siblingShapes(allOf, ctx)
     const own = hasOwnStructure(schema) ? [body({ ...schema, allOf: undefined }, ctx) as DataShape] : []
     return mergeAllOf([...members, ...own])
   }
   const oneOf = schema["oneOf"] ?? schema["anyOf"]
   if (Array.isArray(oneOf) && oneOf.length > 0) {
-    const all = dedupe(oneOf.map((m) => toShape(m, ctx)))
+    const all = dedupe(siblingShapes(oneOf, ctx))
     // A `null` variant is not a variant: it is `nullable`.
     const variants = all.filter((v) => v.kind !== "null")
     const nullable = variants.length < all.length
@@ -200,16 +264,13 @@ const objectBody = (schema: Schema, ctx: ShapeContext): Omit<ObjectShape, keyof 
   const required = new Set(
     Array.isArray(schema["required"]) ? schema["required"].filter((r): r is string => typeof r === "string") : [],
   )
-  const properties: Array<PropertyShape> = []
-  if (isPlainObject(schema["properties"])) {
-    for (const [name, property] of Object.entries(schema["properties"])) {
-      properties.push({ name, required: required.has(name), shape: toShape(property, ctx) })
-    }
-  }
+  const entries = isPlainObject(schema["properties"]) ? Object.entries(schema["properties"]) : []
   const additional = schema["additionalProperties"]
+  const shapes = siblingShapes([...entries.map(([, property]) => property), ...(isPlainObject(additional) ? [additional] : [])], ctx)
+  const properties: Array<PropertyShape> = entries.map(([name], index) => ({ name, required: required.has(name), shape: shapes[index]! }))
   const result: { -readonly [K in keyof ObjectShape]: ObjectShape[K] } = { kind: "object", properties }
   if (isPlainObject(additional)) {
-    result.additional = toShape(additional, ctx)
+    result.additional = shapes[entries.length]!
   } else if (additional === true && properties.length === 0) {
     result.additional = { kind: "unknown" }
   }
