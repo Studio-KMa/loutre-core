@@ -1,6 +1,6 @@
 {
   "name": "@loutre-run/core",
-  "version": "0.8.0",
+  "version": "0.8.2",
   "description": "The Loutre engine: OpenAPI 3.x, Swagger 2.0, TypeScript types, Postman, Insomnia or Bruno collections, HAR files, json-server db.json, curl commands or a GraphQL schema turned into a typed route table and realistic, coherent mock data.",
   "license": "MIT",
   "type": "module",

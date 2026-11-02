@@ -1,6 +1,6 @@
 /**
- * Pools of realistic values, deliberately French: devs mocking a French API
- * want Marie Dubois in Bordeaux, not John Doe.
+ * Pools of realistic values, one set per data locale: devs mocking a French API want Marie Dubois in Bordeaux,
+ * devs mocking Stripe want Emma Johnson in Austin, and nobody wants John Doe.
  */
 
 export const FIRST_NAMES = [
@@ -205,6 +205,151 @@ export const CALENDAR_VALUES: Readonly<Record<string, ReadonlyArray<string>>> = 
 /** Fields whose value is a hexadecimal fingerprint (`commit`, `sha256`), by length. */
 export const FINGERPRINTS: Readonly<Record<string, number>> = { sha: 40, sha1: 40, commit: 40, hash: 40, checksum: 40, digest: 64, sha256: 64, md5: 32 }
 export const ADJECTIVES = ["nouveau", "compact", "durable", "classique", "premium", "léger", "modulaire", "essentiel"] as const
+/** Why a payment or an operation failed (`failure_message`, `decline_reason`). */
+export const PAYMENT_FAILURES = [
+  "Votre carte a été refusée.", "Fonds insuffisants.", "La carte a expiré.", "Code de sécurité incorrect.",
+  "La banque a refusé l'opération.", "Erreur de traitement, réessayez dans un instant.",
+] as const
+export const FAILURES = [
+  "Délai dépassé après 30 secondes.", "Service amont indisponible.", "Validation échouée : champ obligatoire manquant.",
+  "Accès refusé.", "Limite de requêtes atteinte.", "Fichier introuvable.",
+] as const
+
+// ─── English ─────────────────────────────────────────────────────────────────
+
+export const FIRST_NAMES_EN = [
+  "Emma", "Liam", "Olivia", "Noah", "Ava", "Ethan", "Sophia", "Mason", "Isabella", "Lucas",
+  "Mia", "James", "Amelia", "Benjamin", "Harper", "Elijah", "Charlotte", "Daniel", "Grace", "Henry",
+  "Chloe", "Jack", "Priya", "Arjun", "Mei", "Wei", "Sofia", "Diego", "Fatima", "Omar",
+  "Aisha", "Kenji", "Yuki", "Zara", "Leo", "Nora", "Samuel", "Maya", "Owen", "Ruby",
+] as const
+
+export const LAST_NAMES_EN = [
+  "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez",
+  "Wilson", "Anderson", "Taylor", "Thomas", "Moore", "Jackson", "Lee", "Harris", "Clark", "Lewis",
+  "Walker", "Hall", "Young", "King", "Wright", "Lopez", "Hill", "Scott", "Green", "Adams",
+  "Nguyen", "Patel", "Kim", "Chen", "Singh", "Okafor", "Cohen", "Murphy", "Rossi", "Tanaka",
+] as const
+
+export const EMAIL_DOMAINS_EN = [
+  "gmail.com", "gmail.com", "outlook.com", "icloud.com", "yahoo.com", "proton.me", "hey.com", "fastmail.com",
+] as const
+
+/** `region` is the state's postal code, as US APIs (Stripe, Shopify) write it. */
+export const CITIES_EN: ReadonlyArray<City> = [
+  { name: "San Francisco", zip: "94103", region: "CA", lat: 37.7749, lng: -122.4194 },
+  { name: "New York", zip: "10001", region: "NY", lat: 40.7128, lng: -74.006 },
+  { name: "Austin", zip: "78701", region: "TX", lat: 30.2672, lng: -97.7431 },
+  { name: "Seattle", zip: "98101", region: "WA", lat: 47.6062, lng: -122.3321 },
+  { name: "Chicago", zip: "60601", region: "IL", lat: 41.8781, lng: -87.6298 },
+  { name: "Boston", zip: "02108", region: "MA", lat: 42.3601, lng: -71.0589 },
+  { name: "Denver", zip: "80202", region: "CO", lat: 39.7392, lng: -104.9903 },
+  { name: "Portland", zip: "97204", region: "OR", lat: 45.5152, lng: -122.6784 },
+  { name: "Atlanta", zip: "30303", region: "GA", lat: 33.749, lng: -84.388 },
+  { name: "Miami", zip: "33130", region: "FL", lat: 25.7617, lng: -80.1918 },
+  { name: "Los Angeles", zip: "90012", region: "CA", lat: 34.0522, lng: -118.2437 },
+  { name: "Brooklyn", zip: "11201", region: "NY", lat: 40.6782, lng: -73.9442 },
+  { name: "Minneapolis", zip: "55401", region: "MN", lat: 44.9778, lng: -93.265 },
+  { name: "Nashville", zip: "37203", region: "TN", lat: 36.1627, lng: -86.7816 },
+  { name: "Philadelphia", zip: "19103", region: "PA", lat: 39.9526, lng: -75.1652 },
+  { name: "San Diego", zip: "92101", region: "CA", lat: 32.7157, lng: -117.1611 },
+  { name: "Salt Lake City", zip: "84101", region: "UT", lat: 40.7608, lng: -111.891 },
+  { name: "Raleigh", zip: "27601", region: "NC", lat: 35.7796, lng: -78.6382 },
+  { name: "Pittsburgh", zip: "15222", region: "PA", lat: 40.4406, lng: -79.9959 },
+  { name: "Madison", zip: "53703", region: "WI", lat: 43.0731, lng: -89.4012 },
+]
+
+export const STREETS_EN = [
+  "1450 Market Street", "221 Pine Street", "48 Elm Street", "905 Congress Avenue", "17 Harbor Drive",
+  "3200 Lake Shore Drive", "610 Maple Avenue", "84 Bedford Street", "1201 Oak Lane", "55 Water Street",
+  "2400 Sunset Boulevard", "9 Orchard Road", "318 Cedar Street", "700 Broadway", "26 Mill Road",
+] as const
+
+export const COMPANIES_EN = [
+  "Bluebird Supply", "Harbor & Pine", "Lumen Analytics", "Cedar Street Coffee", "Otter & Sons", "Northline Logistics",
+  "Fernwood Studio", "Brightside Health", "Quarry Works", "Juniper Systems", "Maple & Oak", "Copperleaf",
+  "Driftwood Media", "Summit Outfitters", "Ironclad Security", "Tidewater Foods", "Lantern Software", "Kestrel Robotics",
+  "Bramble & Co", "Granite Peak", "Wildflower Bakery", "Silverline Data", "Pebble Finance", "Riverbend Farms",
+] as const
+
+export const PRODUCTS_EN = [
+  "Oak bistro chair", "Nomad desk lamp", "A5 dot-grid notebook", "Canvas weekender bag", "French press 34 oz",
+  "Wave headphones", "Slate coffee table", "Merino wool throw", "Cedar & Fig candle", "Steel water bottle 24 oz",
+  "Nebula vase", "Lisbon rug", "Meridian watch", "Wake sneakers", "Alto speaker",
+  "Type 65 keyboard", "Mist earbuds", "Cast iron teapot", "Washed linen cushion", "Moon mirror",
+  "Atlas shelf", "Cape Horn jacket", "Walnut cutting board", "Ceramic starter kit",
+] as const
+
+export const PETS_EN = [
+  "Biscuit", "Mochi", "Nala", "Simba", "Oscar", "Luna", "Pepper", "Pistachio", "Ziggy", "Caramel",
+  "Rocky", "Maya", "Bean", "Tiger", "Hazel", "Vanilla", "Waffles", "Gus", "Falco", "Feather",
+] as const
+
+export const TITLES_EN = [
+  "Why our mocks lie (and how to fix it)", "Migrating to OpenAPI 3.1 without the pain",
+  "A field guide to pour-over coffee", "Ten weekend trips along the coast", "Understanding Postgres indexes",
+  "Our 2026 roadmap", "A morning in Portland", "Design systems: where to start",
+  "Grandma's apple pie", "Five onboarding mistakes", "Reducing perceived latency",
+  "What the frontend needs from the backend", "Notes from a redesign", "Choosing a database in 2026",
+] as const
+
+export const SENTENCES_EN = [
+  "Free shipping on orders over $50.",
+  "Handmade in our Portland workshop.",
+  "This content is updated weekly by the team.",
+  "Available in three colors, with a two-year warranty.",
+  "A classic, reworked to last.",
+  "Data syncs every fifteen minutes.",
+  "Great for small spaces and big ambitions.",
+  "Free returns within thirty days, no questions asked.",
+  "Made with 80% recycled materials.",
+  "A carefully curated selection, refreshed every season.",
+  "Compatible with the whole existing range.",
+  "Tested and approved by over a thousand customers.",
+] as const
+
+export const TAGS_EN = [
+  "new", "sale", "popular", "organic", "handmade", "beta", "urgent", "internal",
+  "premium", "limited-edition", "recycled", "vintage", "summer", "winter", "wood", "linen",
+] as const
+
+export const CATEGORIES_EN = ["Home", "Fashion", "Tech", "Grocery", "Garden", "Sports", "Beauty", "Kids", "Office", "Leisure"] as const
+export const CURRENCIES_EN = ["USD", "USD", "USD", "EUR", "GBP", "CAD"] as const
+export const COUNTRIES_EN = [
+  { name: "United States", code: "US" }, { name: "United States", code: "US" }, { name: "Canada", code: "CA" },
+  { name: "United Kingdom", code: "GB" }, { name: "Germany", code: "DE" }, { name: "France", code: "FR" },
+  { name: "Australia", code: "AU" }, { name: "Ireland", code: "IE" }, { name: "Netherlands", code: "NL" },
+] as const
+export const LOCALES_EN = ["en-US", "en-US", "en-GB", "fr-FR", "de-DE", "es-ES"] as const
+export const TIMEZONES_EN = ["America/New_York", "America/New_York", "America/Los_Angeles", "America/Chicago", "Europe/London"] as const
+export const WORDS_EN = [
+  "Alpha", "Aurora", "Cobalt", "Dune", "Estuary", "Falcon", "Granite", "Horizon", "Iris", "Jade",
+  "Kelp", "Lagoon", "Mistral", "Nimbus", "Onyx", "Pollen", "Quartz", "Ridge", "Summit", "Tundra",
+] as const
+/** The French named values whose words are French; codes and technical values are shared. */
+export const NAMED_VALUES_EN: Readonly<Record<string, ReadonlyArray<string>>> = {
+  ...NAMED_VALUES,
+  branch: ["main", "develop", "feature/3ds-payments", "fix/vat-rounding", "release/2.4"],
+  source: ["web", "api", "import", "mobile", "partner"],
+  campaign: ["back-to-school-2026", "black-friday", "october-newsletter", "winter-sale", "pro-launch"],
+  segment: ["consumers", "smb", "enterprise", "students", "early-adopters"],
+  location: ["Austin", "Seattle", "Brooklyn", "Denver", "San Francisco", "Chicago"],
+  path: ["/var/data/exports/report-2026-09.csv", "/home/app/uploads/avatar.png", "/srv/backups/db-2026-10-01.sql.gz", "/etc/app/config.yaml"],
+  filepath: ["/var/data/exports/report-2026-09.csv", "/home/app/uploads/avatar.png", "/srv/backups/db-2026-10-01.sql.gz"],
+  filename: ["quarterly-report.pdf", "invoice-2026-09.pdf", "customers-export.csv", "profile-photo.jpg", "signed-contract.pdf"],
+  file: ["quarterly-report.pdf", "invoice-2026-09.pdf", "customers-export.csv", "profile-photo.jpg"],
+  query: ["status:open", "tag:urgent", "invoice 2026", "otter"],
+  nationality: ["US", "GB", "CA", "DE", "FR"],
+  market: ["US", "GB", "CA", "DE", "FR", "AU"],
+}
+export const PAYMENT_FAILURES_EN = [
+  "Your card was declined.", "Insufficient funds.", "Your card has expired.", "Your card's security code is incorrect.",
+  "The bank declined the transaction.", "A processing error occurred, please try again.",
+] as const
+export const FAILURES_EN = [
+  "Timed out after 30 seconds.", "Upstream service unavailable.", "Validation failed: missing required field.",
+  "Permission denied.", "Rate limit exceeded.", "File not found.",
+] as const
 
 /** Error code and message per HTTP status, for 4xx/5xx bodies. */
 export const ERROR_TEXTS: Record<number, { readonly code: string; readonly message: string }> = {
@@ -224,8 +369,116 @@ export const ERROR_TEXTS: Record<number, { readonly code: string; readonly messa
   504: { code: "gateway_timeout", message: "Le service amont n'a pas répondu à temps." },
 }
 
-export const errorTextFor = (status: number): { readonly code: string; readonly message: string } =>
-  ERROR_TEXTS[status] ??
-  (status >= 500
-    ? { code: "server_error", message: "Erreur côté serveur." }
-    : { code: "request_error", message: "La requête n'a pas pu être traitée." })
+export const ERROR_TEXTS_EN: Record<number, { readonly code: string; readonly message: string }> = {
+  400: { code: "bad_request", message: "The request is invalid: check the fields you sent." },
+  401: { code: "unauthorized", message: "Authentication required." },
+  402: { code: "payment_required", message: "Payment is required to access this resource." },
+  403: { code: "forbidden", message: "You don't have permission to do that." },
+  404: { code: "not_found", message: "The requested resource was not found." },
+  405: { code: "method_not_allowed", message: "This method is not allowed on this resource." },
+  409: { code: "conflict", message: "Conflict: the resource already exists or changed in the meantime." },
+  410: { code: "gone", message: "This resource no longer exists." },
+  422: { code: "unprocessable_entity", message: "The data sent did not pass validation." },
+  429: { code: "too_many_requests", message: "Too many requests: try again in a few seconds." },
+  500: { code: "internal_error", message: "An internal error occurred, our otters are on it." },
+  502: { code: "bad_gateway", message: "Bad gateway." },
+  503: { code: "service_unavailable", message: "Service temporarily unavailable." },
+  504: { code: "gateway_timeout", message: "The upstream service did not respond in time." },
+}
+
+/** Language of the generated data, recorded with it: a mock regenerates and answers its errors in its own. */
+export type DataLocale = "fr" | "en"
+
+export const errorTextFor = (status: number, locale: DataLocale = "fr"): { readonly code: string; readonly message: string } => {
+  const known = (locale === "en" ? ERROR_TEXTS_EN : ERROR_TEXTS)[status]
+  if (known !== undefined) return known
+  if (locale === "en") return status >= 500 ? { code: "server_error", message: "Server error." } : { code: "request_error", message: "The request could not be processed." }
+  return status >= 500 ? { code: "server_error", message: "Erreur côté serveur." } : { code: "request_error", message: "La requête n'a pas pu être traitée." }
+}
+
+/** Every value that depends on the data locale. */
+export interface Pools {
+  readonly locale: DataLocale
+  readonly firstNames: ReadonlyArray<string>
+  readonly lastNames: ReadonlyArray<string>
+  readonly emailDomains: ReadonlyArray<string>
+  readonly cities: ReadonlyArray<City>
+  readonly streets: ReadonlyArray<string>
+  readonly companies: ReadonlyArray<string>
+  readonly companyTld: string
+  readonly products: ReadonlyArray<string>
+  readonly pets: ReadonlyArray<string>
+  readonly titles: ReadonlyArray<string>
+  readonly sentences: ReadonlyArray<string>
+  readonly tags: ReadonlyArray<string>
+  readonly categories: ReadonlyArray<string>
+  readonly currencies: ReadonlyArray<string>
+  readonly countries: ReadonlyArray<{ readonly name: string; readonly code: string }>
+  readonly homeCountry: string
+  readonly homeCountryCode: string
+  readonly locales: ReadonlyArray<string>
+  readonly timezones: ReadonlyArray<string>
+  readonly words: ReadonlyArray<string>
+  readonly named: Readonly<Record<string, ReadonlyArray<string>>>
+  readonly paymentFailures: ReadonlyArray<string>
+  readonly failures: ReadonlyArray<string>
+  /** Fallback label of a field nothing describes. */
+  readonly value: string
+}
+
+export const POOLS: Readonly<Record<DataLocale, Pools>> = {
+  fr: {
+    locale: "fr",
+    firstNames: FIRST_NAMES,
+    lastNames: LAST_NAMES,
+    emailDomains: EMAIL_DOMAINS,
+    cities: CITIES,
+    streets: STREETS,
+    companies: COMPANIES,
+    companyTld: "fr",
+    products: PRODUCTS,
+    pets: PETS,
+    titles: TITLES,
+    sentences: SENTENCES,
+    tags: TAGS,
+    categories: CATEGORIES,
+    currencies: CURRENCIES,
+    countries: COUNTRIES,
+    homeCountry: "France",
+    homeCountryCode: "FR",
+    locales: LOCALES,
+    timezones: TIMEZONES,
+    words: WORDS,
+    named: NAMED_VALUES,
+    paymentFailures: PAYMENT_FAILURES,
+    failures: FAILURES,
+    value: "valeur",
+  },
+  en: {
+    locale: "en",
+    firstNames: FIRST_NAMES_EN,
+    lastNames: LAST_NAMES_EN,
+    emailDomains: EMAIL_DOMAINS_EN,
+    cities: CITIES_EN,
+    streets: STREETS_EN,
+    companies: COMPANIES_EN,
+    companyTld: "com",
+    products: PRODUCTS_EN,
+    pets: PETS_EN,
+    titles: TITLES_EN,
+    sentences: SENTENCES_EN,
+    tags: TAGS_EN,
+    categories: CATEGORIES_EN,
+    currencies: CURRENCIES_EN,
+    countries: COUNTRIES_EN,
+    homeCountry: "United States",
+    homeCountryCode: "US",
+    locales: LOCALES_EN,
+    timezones: TIMEZONES_EN,
+    words: WORDS_EN,
+    named: NAMED_VALUES_EN,
+    paymentFailures: PAYMENT_FAILURES_EN,
+    failures: FAILURES_EN,
+    value: "value",
+  },
+}

@@ -42,6 +42,10 @@ export interface ValueContext {
   readonly identity: Identity
   /** AI-suggested values for this field, rotated by index. */
   readonly vocabulary: ReadonlyArray<string> | undefined
+  /** Values of the data locale. */
+  readonly pools: P.Pools
+  /** The enclosing object holds someone's details of its own (email, phone, street): its bare `name` is a person's. */
+  readonly personal?: boolean | undefined
 }
 
 export const slugify = (s: string): string =>
@@ -54,18 +58,18 @@ export const slugify = (s: string): string =>
 
 export const capitalize = (s: string): string => (s.length === 0 ? s : s[0]!.toUpperCase() + s.slice(1))
 
-export const makePerson = (rng: Rng): Person => {
-  const first = rng.pick(P.FIRST_NAMES)
-  const last = rng.pick(P.LAST_NAMES)
+export const makePerson = (rng: Rng, pools: P.Pools = P.POOLS.fr): Person => {
+  const first = rng.pick(pools.firstNames)
+  const last = rng.pick(pools.lastNames)
   const handle = slugify(`${first} ${last}`).replace(/-/g, ".")
-  const domain = rng.pick(P.EMAIL_DOMAINS)
+  const domain = rng.pick(pools.emailDomains)
   return { first, last, full: `${first} ${last}`, handle, email: `${handle}@${domain}` }
 }
 
-export const makeCompany = (rng: Rng): Company => {
-  const name = rng.pick(P.COMPANIES)
+export const makeCompany = (rng: Rng, pools: P.Pools = P.POOLS.fr): Company => {
+  const name = rng.pick(pools.companies)
   const slug = slugify(name)
-  return { name, slug, domain: `${slug}.fr` }
+  return { name, slug, domain: `${slug}.${pools.companyTld}` }
 }
 
 const rotate = <T>(pool: ReadonlyArray<T>, ctx: ValueContext): T =>
@@ -158,6 +162,7 @@ export const ibanValid = (value: string): boolean => {
 }
 
 const BICS = ["BNPAFRPP", "SOGEFRPP", "CRLYFRPP", "AGRIFRPP", "CEPAFRPP", "CMCIFRPP", "BOUSFRPP", "QNTOFRP1"] as const
+const BICS_EN = ["CHASUS33", "BOFAUS3N", "CITIUS33", "WFBIUS6S", "BARCGB22", "HSBCGB2L", "NWBKGB2L", "DEUTDEFF"] as const
 
 const HOUR = 3_600_000
 const DAY = 24 * HOUR
@@ -178,18 +183,22 @@ export const laterDateTime = (rng: Rng, after: Date, now: Date): Date =>
 export const isoDateTime = (d: Date): string => d.toISOString().replace(/\.\d{3}Z$/, "Z")
 export const isoDate = (d: Date): string => d.toISOString().slice(0, 10)
 
-const humanize = (name: string): string => capitalize(tokenize(name).join(" ") || "valeur")
+const humanize = (name: string, pools: P.Pools): string => capitalize(tokenize(name).join(" ") || pools.value)
 
-const phoneNumber = (rng: Rng, mobile: boolean): string =>
-  `+33 ${mobile ? rng.pick([6, 7]) : rng.int(1, 5)} ${digits(rng, 2)} ${digits(rng, 2)} ${digits(rng, 2)} ${digits(rng, 2)}`
+/** US numbers stay in 555-0100…0199, the range reserved for fiction. */
+const AREA_CODES = [415, 212, 512, 206, 312, 617, 303, 503, 404, 305] as const
+const phoneNumber = (rng: Rng, mobile: boolean, locale: P.DataLocale): string =>
+  locale === "en"
+    ? `+1 ${rng.pick(AREA_CODES)} 555 01${digits(rng, 2)}`
+    : `+33 ${mobile ? rng.pick([6, 7]) : rng.int(1, 5)} ${digits(rng, 2)} ${digits(rng, 2)} ${digits(rng, 2)} ${digits(rng, 2)}`
 
-const skuFor = (tokens: ReadonlyArray<string>, rng: Rng): string => {
+const skuFor = (tokens: ReadonlyArray<string>, rng: Rng, locale: P.DataLocale): string => {
   const has = (...words: ReadonlyArray<string>): boolean => tokens.some((t) => words.includes(t))
   if (has("isbn")) return `978${digits(rng, 10)}`
   if (has("ean", "barcode", "gtin")) return `3${digits(rng, 12)}`
-  if (has("plate", "immatriculation")) return `${letters(rng, 2)}-${digits(rng, 3)}-${letters(rng, 2)}`
+  if (has("plate", "immatriculation")) return locale === "en" ? `${digits(rng, 1)}${letters(rng, 3)}${digits(rng, 3)}` : `${letters(rng, 2)}-${digits(rng, 3)}-${letters(rng, 2)}`
   if (has("serial")) return `SN-${letters(rng, 2)}${digits(rng, 8)}`
-  if (has("tracking")) return `${letters(rng, 2)}${digits(rng, 9)}FR`
+  if (has("tracking")) return `${letters(rng, 2)}${digits(rng, 9)}${locale === "en" ? "US" : "FR"}`
   if (has("order", "commande")) return `ORD-${digits(rng, 6)}`
   if (has("invoice", "facture")) return `F-2026-${digits(rng, 4)}`
   const prefix = (tokens.find((t) => t.length >= 3) ?? "ref").slice(0, 3).toUpperCase()
@@ -199,9 +208,9 @@ const skuFor = (tokens: ReadonlyArray<string>, rng: Rng): string => {
 const UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ"
 const letters = (rng: Rng, length: number): string => Array.from({ length }, () => UPPER[rng.int(0, UPPER.length - 1)]).join("")
 
-const personOf = (ctx: ValueContext): Person => ctx.identity.person ?? makePerson(ctx.rng)
-const companyOf = (ctx: ValueContext): Company => ctx.identity.company ?? makeCompany(ctx.rng)
-const cityOf = (ctx: ValueContext): P.City => ctx.identity.city ?? ctx.rng.pick(P.CITIES)
+const personOf = (ctx: ValueContext): Person => ctx.identity.person ?? makePerson(ctx.rng, ctx.pools)
+const companyOf = (ctx: ValueContext): Company => ctx.identity.company ?? makeCompany(ctx.rng, ctx.pools)
+const cityOf = (ctx: ValueContext): P.City => ctx.identity.city ?? ctx.rng.pick(ctx.pools.cities)
 
 /** A common field name's own vocabulary (`environment`, `branch`, `commit`…), whole name first, then its last word. */
 const namedValue = (tokens: ReadonlyArray<string>, ctx: ValueContext): string | undefined => {
@@ -209,7 +218,7 @@ const namedValue = (tokens: ReadonlyArray<string>, ctx: ValueContext): string | 
   if (calendar !== undefined) return rotate(P.CALENDAR_VALUES[calendar]!, ctx)
   // `codesDepartements` reads as `codeDepartement`: every word of the name in the singular.
   const singularTokens = tokens.map((t) => (t.length > 3 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t))
-  const named = (word: string): ReadonlyArray<string> | undefined => (Object.hasOwn(P.NAMED_VALUES, word) ? P.NAMED_VALUES[word] : undefined)
+  const named = (word: string): ReadonlyArray<string> | undefined => (Object.hasOwn(ctx.pools.named, word) ? ctx.pools.named[word] : undefined)
   const plural = named(singularTokens.join("")) ?? named(singularTokens[singularTokens.length - 1] ?? "")
   const whole = tokens.join("")
   const last = tokens[tokens.length - 1] ?? ""
@@ -263,7 +272,7 @@ const rawString = (semantic: Semantic, shape: StringShape, ctx: ValueContext): s
     case "username":
       return personOf(ctx).handle
     case "phone":
-      return phoneNumber(rng, !tokens.includes("fax") && !tokens.includes("landline"))
+      return phoneNumber(rng, !tokens.includes("fax") && !tokens.includes("landline"), ctx.pools.locale)
     case "avatar":
       return `https://i.pravatar.cc/150?u=${personOf(ctx).handle}`
     case "image":
@@ -273,21 +282,24 @@ const rawString = (semantic: Semantic, shape: StringShape, ctx: ValueContext): s
       if (typeof shape.example === "string" && /^https?:\/\//.test(shape.example)) return shape.example
       const company = companyOf(ctx)
       if (tokens.some((t) => ["website", "homepage", "site"].includes(t))) return `https://${company.domain}`
-      return `https://${company.domain}/${slugify(rotate(P.WORDS, ctx))}/${shortId(rng, 4)}`
+      return `https://${company.domain}/${slugify(rotate(ctx.pools.words, ctx))}/${shortId(rng, 4)}`
     }
     case "hostname":
       if (typeof shape.example === "string" && shape.example.includes(".")) return shape.example
       return tokens.includes("api") ? `api.${companyOf(ctx).domain}` : companyOf(ctx).domain
     case "slug":
-      return `${slugify(rotate(P.WORDS, ctx))}-${shortId(rng, 4)}`
+      return `${slugify(rotate(ctx.pools.words, ctx))}-${shortId(rng, 4)}`
     case "title":
-      return rotate(P.TITLES, ctx)
+      return rotate(ctx.pools.titles, ctx)
     case "sentence":
-      return rng.pick(P.SENTENCES)
+      return rng.pick(ctx.pools.sentences)
     case "paragraph":
-      return rng.sample(P.SENTENCES, rng.int(2, 3)).join(" ")
+      return rng.sample(ctx.pools.sentences, rng.int(2, 3)).join(" ")
+    case "failure-reason":
+      return rng.pick(/charge|payment|paiement|refund|rembours|payout|transfer|card|carte|invoice|facture|subscription|abonnement/i.test(ctx.parentTitle ?? "") ? ctx.pools.paymentFailures : ctx.pools.failures)
     case "street":
-      return tokens.includes("line2") ? `Bâtiment ${letters(rng, 1)}, ${rng.int(1, 5)}e étage` : rng.pick(P.STREETS)
+      if (!tokens.includes("line2")) return rng.pick(ctx.pools.streets)
+      return ctx.pools.locale === "en" ? rng.pick([`Suite ${rng.int(1, 9)}00`, `Apt ${rng.int(1, 12)}${letters(rng, 1)}`, `Floor ${rng.int(2, 12)}`]) : `Bâtiment ${letters(rng, 1)}, ${rng.int(1, 5)}e étage`
     case "city":
       return cityOf(ctx).name
     case "zip":
@@ -295,9 +307,14 @@ const rawString = (semantic: Semantic, shape: StringShape, ctx: ValueContext): s
     case "region":
       return cityOf(ctx).region
     case "country":
-      return "France"
-    case "country-code":
-      return tokens.includes("code") || tokens.includes("iso") ? rng.pick(P.COUNTRIES).code : rng.pick(P.COUNTRIES).name
+      return ctx.pools.homeCountry
+    case "country-code": {
+      const code = tokens.includes("code") || tokens.includes("iso") || shape.maxLength === 2
+      // An address's country is its city's.
+      if (ctx.identity.city !== undefined) return code ? ctx.pools.homeCountryCode : ctx.pools.homeCountry
+      const country = rng.pick(ctx.pools.countries)
+      return code ? country.code : country.name
+    }
     case "latitude":
       return String(cityOf(ctx).lat)
     case "longitude":
@@ -305,13 +322,13 @@ const rawString = (semantic: Semantic, shape: StringShape, ctx: ValueContext): s
     case "company":
       return companyOf(ctx).name
     case "product-name":
-      return rotate(P.PRODUCTS, ctx)
+      return rotate(ctx.pools.products, ctx)
     case "pet-name":
-      return rotate(P.PETS, ctx)
+      return rotate(ctx.pools.pets, ctx)
     case "money":
       return rng.float(4.9, 499).toFixed(2)
     case "currency":
-      return rng.pick(P.CURRENCIES)
+      return rng.pick(ctx.pools.currencies)
     case "quantity":
     case "count":
       return String(rng.int(1, 12))
@@ -330,19 +347,19 @@ const rawString = (semantic: Semantic, shape: StringShape, ctx: ValueContext): s
     case "plan":
       return rotate(P.PLANS, ctx)
     case "category":
-      return rotate(P.CATEGORIES, ctx)
+      return rotate(ctx.pools.categories, ctx)
     case "tag":
-      return rotate(P.TAGS, ctx)
+      return rotate(ctx.pools.tags, ctx)
     case "color":
       return rng.pick(P.COLORS)
     case "locale":
-      return rng.pick(P.LOCALES)
+      return rng.pick(ctx.pools.locales)
     case "timezone":
-      return rng.pick(P.TIMEZONES)
+      return rng.pick(ctx.pools.timezones)
     case "iban":
       return iban(rng)
     case "bic":
-      return rng.pick(BICS)
+      return rng.pick(ctx.pools.locale === "en" ? BICS_EN : BICS)
     case "siret":
       return siret(rng)
     case "siren":
@@ -356,13 +373,13 @@ const rawString = (semantic: Semantic, shape: StringShape, ctx: ValueContext): s
     case "user-agent":
       return rng.pick(P.USER_AGENTS)
     case "sku":
-      return skuFor(tokens, rng)
+      return skuFor(tokens, rng, ctx.pools.locale)
     case "version":
       return `${rng.int(0, 4)}.${rng.int(0, 12)}.${rng.int(0, 9)}`
     case "token":
       return hex(rng, 32)
     case "password":
-      return `${rng.pick(P.WORDS)}-${rng.pick(P.WORDS)}-${digits(rng, 4)}`
+      return `${rng.pick(ctx.pools.words)}-${rng.pick(ctx.pools.words)}-${digits(rng, 4)}`
     case "date-past":
       return isoDate(pastDateTime(rng, now))
     case "date-future":
@@ -386,9 +403,9 @@ const rawString = (semantic: Semantic, shape: StringShape, ctx: ValueContext): s
     case "duration":
       return `PT${rng.int(1, 120)}M`
     case "error-message":
-      return P.errorTextFor(ctx.status ?? 500).message
+      return P.errorTextFor(ctx.status ?? 500, ctx.pools.locale).message
     case "error-code":
-      return P.errorTextFor(ctx.status ?? 500).code
+      return P.errorTextFor(ctx.status ?? 500, ctx.pools.locale).code
     case "error-status":
       return String(ctx.status ?? 500)
     case "base64":
@@ -401,12 +418,13 @@ const rawString = (semantic: Semantic, shape: StringShape, ctx: ValueContext): s
       // A bare name with nothing else to go on: the object's kind reads better than the field's
       // ("Restaurant Dune", not "Name Dune").
       const bare = /^(name|nom|title|titre|libelle|label|denomination)$/.test(tokenize(ctx.name).join(""))
-      return `${humanize(bare && ctx.parentTitle !== undefined ? ctx.parentTitle : ctx.name)} ${rotate(P.WORDS, ctx)}`
+      if (ctx.personal === true && /^(name|nom)$/.test(tokenize(ctx.name).join(""))) return personOf(ctx).full
+      return `${humanize(bare && ctx.parentTitle !== undefined ? ctx.parentTitle : ctx.name, ctx.pools)} ${rotate(ctx.pools.words, ctx)}`
     }
     case "generic": {
       if (typeof shape.example === "string") return shape.example
       if (typeof shape.default === "string") return shape.default
-      return namedValue(tokens, ctx) ?? `${humanize(ctx.name)} ${rotate(P.WORDS, ctx)}`
+      return namedValue(tokens, ctx) ?? `${humanize(ctx.name, ctx.pools)} ${rotate(ctx.pools.words, ctx)}`
     }
   }
 }

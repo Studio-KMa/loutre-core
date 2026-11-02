@@ -4,7 +4,7 @@
  */
 import type { Json, JsonObject, MockDefinition, Route } from "./model"
 import { generateSync, type Vocabulary } from "./generation"
-import { errorTextFor } from "./generation/pools"
+import { errorTextFor, type DataLocale } from "./generation/pools"
 import { collectionFor, COUNTER_KEYS, hasPathParam, LIST_KEYS, listKeyFor, replaceItems } from "./state"
 import { own } from "./util/pointer"
 
@@ -311,7 +311,10 @@ export const resolve = (
         status: 405,
         body: {
           error: "method_not_allowed",
-          message: `${request.method.toUpperCase()} n'est pas documenté sur ${request.pathname}.`,
+          message:
+            mock.data.locale === "en"
+              ? `${request.method.toUpperCase()} is not documented on ${request.pathname}.`
+              : `${request.method.toUpperCase()} n'est pas documenté sur ${request.pathname}.`,
           allowed,
         },
         delayMs: 0,
@@ -324,7 +327,10 @@ export const resolve = (
       status: 404,
       body: {
         error: "not_found",
-        message: `Aucune route ne correspond à ${request.method.toUpperCase()} ${request.pathname}.`,
+        message:
+          mock.data.locale === "en"
+            ? `No route matches ${request.method.toUpperCase()} ${request.pathname}.`
+            : `Aucune route ne correspond à ${request.method.toUpperCase()} ${request.pathname}.`,
         routes: routes.map((r) => `${r.method.toUpperCase()} ${r.path}`),
       },
       delayMs: 0,
@@ -396,7 +402,7 @@ export const resolve = (
       if (key !== undefined) body = replaceItems(body, stateItems, key)
     }
   }
-  body = withMessage(body, status, request.headers[HEADER_MESSAGE])
+  body = withMessage(body, status, request.headers[HEADER_MESSAGE], mock.data.locale)
   body = withCount(body, request.headers[HEADER_COUNT])
   const delayMs = delayFor(request, rule, routeBehavior, behavior, random)
   return { kind, status, body, delayMs, headers: scenarioHeaders, route }
@@ -414,13 +420,13 @@ const seededBody = (
   vocabulary: Vocabulary | undefined,
 ): MockDefinition | undefined => {
   if (seed === undefined || seed.trim().length === 0) return undefined
-  const data = generateSync(mock.table, { seed: seed.trim().slice(0, 64), only: [route.id], vocabulary, maxValues: SEEDED_MAX_VALUES })
+  const data = generateSync(mock.table, { seed: seed.trim().slice(0, 64), only: [route.id], vocabulary, maxValues: SEEDED_MAX_VALUES, locale: mock.data.locale })
   if (data.bodies[route.id]?.[String(status)] === undefined && !(status >= 400)) return undefined
   return { ...mock, data: { ...mock.data, bodies: { ...mock.data.bodies, ...data.bodies }, collections: { ...mock.data.collections, ...data.collections } } }
 }
 
 /** In a generic error body, numeric `code` / `status` fields and the message follow the served status. */
-const withStatusNumber = (body: Json, status: number): Json => {
+const withStatusNumber = (body: Json, status: number, locale: DataLocale | undefined): Json => {
   if (!isObject(body)) return body
   const patched: Record<string, Json> = { ...body }
   for (const key of ["code", "status", "statusCode", "status_code"]) {
@@ -428,14 +434,14 @@ const withStatusNumber = (body: Json, status: number): Json => {
     if (typeof value === "number" && value >= 100 && value <= 599) patched[key] = status
   }
   if (typeof patched["message"] === "string" && status >= 400) {
-    const generic = errorTextFor(status)
+    const generic = errorTextFor(status, locale)
     patched["message"] = generic.message
   }
   return patched
 }
 
 /** `x-loutre-message` on an error: replaces (or adds) the body's message field. */
-const withMessage = (body: Json | undefined, status: number, message: string | undefined): Json | undefined => {
+const withMessage = (body: Json | undefined, status: number, message: string | undefined, locale: DataLocale | undefined): Json | undefined => {
   if (message === undefined || status < 400) return body
   const text = message.trim().slice(0, 500)
   if (text.length === 0) return body
@@ -443,7 +449,7 @@ const withMessage = (body: Json | undefined, status: number, message: string | u
     const key = ["message", "error_description", "detail", "title", "error"].find((k) => typeof body[k] === "string") ?? "message"
     return { ...body, [key]: text }
   }
-  return { error: errorTextFor(status).code, message: text, status }
+  return { error: errorTextFor(status, locale).code, message: text, status }
 }
 
 /** `x-loutre-count` on a list: truncates it (0 → empty state), wrapped lists (`data`, `items`…) included. */
@@ -517,11 +523,11 @@ const bodyFor = (
   if (body === undefined) {
     // Documented generic body ("4XX", "default"): make it carry the status actually served.
     const fallback = perStatus[`${key[0]}XX`] ?? (status >= 400 ? perStatus["DEFAULT"] : undefined)
-    if (fallback !== undefined) body = withStatusNumber(fallback, status)
+    if (fallback !== undefined) body = withStatusNumber(fallback, status, mock.data.locale)
   }
   if (body === undefined) {
     if (status >= 400) {
-      const text = errorTextFor(status)
+      const text = errorTextFor(status, mock.data.locale)
       return { error: text.code, message: text.message, status }
     }
     return undefined

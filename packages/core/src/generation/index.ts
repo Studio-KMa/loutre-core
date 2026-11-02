@@ -34,7 +34,7 @@ import {
   type Identity,
   type ValueContext,
 } from "./values"
-import { CITIES } from "./pools"
+import { POOLS, type DataLocale, type Pools } from "./pools"
 import { setOwn } from "../util/pointer"
 
 /** Suggested values per component and field: `{ Product: { name: ["Chaise Bistrot", …] } }`. */
@@ -53,6 +53,8 @@ export interface GenerationOptions {
   readonly only?: ReadonlyArray<string> | undefined
   /** Values generated at most in this run (default `MAX_GENERATED_VALUES`); lower on per-request paths. */
   readonly maxValues?: number | undefined
+  /** Language of names, addresses and texts (default French, the language of mocks made before the choice existed). */
+  readonly locale?: DataLocale | undefined
 }
 
 export const generate = (table: RouteTable, options: GenerationOptions): Effect.Effect<MockData, GenerationError> =>
@@ -173,6 +175,7 @@ class Generator {
   private readonly sources: Record<string, string> = {}
   private readonly weights = new WeakMap<object, number>()
   private readonly completeness = new WeakMap<object, number>()
+  private readonly pools: Pools
   private produced = 0
 
   constructor(
@@ -181,6 +184,7 @@ class Generator {
   ) {
     this.root = makeRng(options.seed)
     this.now = options.now ?? new Date()
+    this.pools = POOLS[options.locale ?? "fr"]
     for (const route of table.routes) {
       for (const response of route.responses) {
         if (response.shape !== undefined && !isErrorStatus(response.status)) this.registerTitled(response.shape, 0)
@@ -203,7 +207,7 @@ class Generator {
     }
     const collections: Record<string, Array<Json>> = {}
     for (const [title, items] of this.collections) collections[title] = items
-    return { seed: this.options.seed, generatedAt: isoDateTime(this.now), bodies, collections, sources: this.sources }
+    return { seed: this.options.seed, generatedAt: isoDateTime(this.now), bodies, collections, sources: this.sources, locale: this.pools.locale }
   }
 
   private registerTitled(shape: DataShape, depth: number): void {
@@ -271,6 +275,7 @@ class Generator {
       inCollection: false,
       identity: {},
       vocabulary: undefined,
+      pools: this.pools,
       depth: 0,
     }
   }
@@ -303,6 +308,7 @@ class Generator {
         inCollection: true,
         identity: {},
         vocabulary: undefined,
+        pools: this.pools,
         depth: 1,
       }
       items.push(this.object(shape, ctx))
@@ -325,7 +331,8 @@ class Generator {
     const semantic = ctx.name.length > 0 ? infer(ctx.name, shape, { parentTitle: ctx.parentTitle, status: ctx.status }) : "generic"
     if (shape.nullable === true && ctx.name.length > 0) {
       if (semantic === "datetime-deleted") return ctx.rng.chance(0.85) ? null : this.value({ ...shape, nullable: false }, ctx)
-      if (ctx.rng.chance(0.12)) return null
+      // What identifies someone or somewhere is filled in: an address without its city reads as a bug, not as data.
+      if (!ALWAYS_FILLED.has(semantic) && ctx.rng.chance(0.12)) return null
     }
     // The schema's own example, for the first element: what the author wrote is what they expect to see.
     if (ctx.index === 0 && shape.example !== undefined && exampleFits(shape, shape.example)) return shape.example
@@ -423,7 +430,7 @@ class Generator {
 
   private object(shape: ObjectShape, ctx: GenContext): JsonObject {
     const title = shape.title ?? (ctx.name.length > 0 ? ctx.name : ctx.parentTitle)
-    const identity = this.identityFor(shape, ctx)
+    const { identity, personal } = this.identityFor(shape, ctx)
     const vocabulary = this.vocabularyFor(shape.title)
     const out: Record<string, Json> = {}
     const semantics = new Map<string, Semantic>()
@@ -435,6 +442,7 @@ class Generator {
         name: property.name,
         parentTitle: title,
         identity,
+        personal,
         vocabulary: vocabulary?.[property.name],
         depth: ctx.depth + 1,
       }
@@ -451,14 +459,14 @@ class Generator {
     return out
   }
 
-  private identityFor(shape: ObjectShape, ctx: GenContext): Identity {
+  private identityFor(shape: ObjectShape, ctx: GenContext): { readonly identity: Identity; readonly personal: boolean } {
     const semantics = shape.properties.map((p) => infer(p.name, p.shape, { parentTitle: shape.title ?? ctx.parentTitle, status: ctx.status }))
     const identity: { -readonly [K in keyof Identity]: Identity[K] } = { ...ctx.identity }
     const rng = ctx.rng.fork("identity")
-    if (identity.person === undefined && semantics.some((s) => PERSON_SEMANTICS.has(s))) identity.person = makePerson(rng)
-    if (identity.company === undefined && semantics.some((s) => COMPANY_SEMANTICS.has(s))) identity.company = makeCompany(rng)
-    if (identity.city === undefined && semantics.some((s) => GEO_SEMANTICS.has(s))) identity.city = rng.pick(CITIES)
-    return identity
+    if (identity.person === undefined && semantics.some((s) => PERSON_SEMANTICS.has(s))) identity.person = makePerson(rng, this.pools)
+    if (identity.company === undefined && semantics.some((s) => COMPANY_SEMANTICS.has(s))) identity.company = makeCompany(rng, this.pools)
+    if (identity.city === undefined && semantics.some((s) => GEO_SEMANTICS.has(s))) identity.city = rng.pick(this.pools.cities)
+    return { identity, personal: semantics.some((s) => s === "email" || s === "phone" || s === "street") }
   }
 
   private vocabularyFor(title: string | undefined): { readonly [field: string]: ReadonlyArray<string> } | undefined {
@@ -477,6 +485,7 @@ const MAP_KEYS = ["source", "campaign", "channel", "segment", "origin", "cohort"
 const PERSON_SEMANTICS: ReadonlySet<Semantic> = new Set(["email", "first-name", "last-name", "full-name", "username", "avatar"])
 const COMPANY_SEMANTICS: ReadonlySet<Semantic> = new Set(["company", "url", "hostname"])
 const GEO_SEMANTICS: ReadonlySet<Semantic> = new Set(["city", "zip", "region", "latitude", "longitude", "street"])
+const ALWAYS_FILLED: ReadonlySet<Semantic> = new Set(["city", "zip", "region", "country", "country-code", "full-name", "first-name", "last-name", "email", "company"])
 
 const isErrorStatus = (status: string): boolean => status === "DEFAULT" || /^[45]/.test(status)
 

@@ -1,6 +1,6 @@
 {
   "name": "loutre",
-  "version": "0.8.0",
+  "version": "0.8.2",
   "description": "Loutre in your terminal: serve an OpenAPI, Swagger, TypeScript, Postman, Insomnia, Bruno, HAR, json-server, curl or GraphQL description as a mock API with realistic data, or push it to loutre.run.",
   "license": "MIT",
   "type": "module",

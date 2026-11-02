@@ -2,6 +2,8 @@ import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
 import { generateSync, type Vocabulary } from "../src/generation"
 import { ibanValid, luhnValid } from "../src/generation/values"
+import { FIRST_NAMES_EN, PAYMENT_FAILURES, PAYMENT_FAILURES_EN } from "../src/generation/pools"
+import { resolve } from "../src/serving"
 import { ingest } from "../src/ingestion"
 import { interpret } from "../src/interpretation"
 import type { DataShape, JsonObject, ObjectShape, Route, RouteTable } from "../src/model"
@@ -357,5 +359,55 @@ describe("génération — budget de formes", () => {
     const list = arr(generateSync(table, { seed: "budget", now: NOW }).bodies["get:/customers"]?.["200"])
     expect(list[0]!["id"]).toEqual(expect.any(String))
     expect(String(list[0]!["email"])).toContain("@")
+  })
+})
+
+describe("génération — langue des données", () => {
+  const shop = {
+    openapi: "3.1.0",
+    info: { title: "Shop", version: "1" },
+    paths: {
+      "/customers": { get: { responses: { "200": { description: "ok", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Customer" } } } } } } } },
+      "/charges": { get: { responses: { "200": { description: "ok", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Charge" } } } } } } } },
+    },
+    components: {
+      schemas: {
+        Customer: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            email: { type: "string", format: "email" },
+            phone: { type: "string" },
+            address: { type: "object", properties: { line1: { type: "string" }, city: { type: "string" }, state: { type: "string" }, country: { type: "string" } } },
+          },
+        },
+        Charge: { type: "object", properties: { id: { type: "string" }, failure_message: { type: "string" } } },
+      },
+    },
+  }
+
+  it("en anglais : noms, téléphones, adresses, motifs d'échec et erreurs servies, la langue notée avec les données", async () => {
+    const table = await tableOf(shop)
+    const data = generateSync(table, { seed: "langue", now: NOW, locale: "en" })
+    expect(data.locale).toBe("en")
+    const customer = arr(data.bodies["get:/customers"]?.["200"])[0]!
+    expect(FIRST_NAMES_EN).toContain(String(customer["name"]).split(" ")[0])
+    expect(String(customer["phone"])).toMatch(/^\+1 \d{3} 555 01\d{2}$/)
+    expect(obj(customer["address"])["country"]).toBe("United States")
+    expect(PAYMENT_FAILURES_EN).toContain(arr(data.bodies["get:/charges"]?.["200"])[0]!["failure_message"])
+    const missing = resolve({ version: 1, table, data }, { latencyMs: 0, jitter: 0, errorRate: 0 }, { method: "GET", pathname: "/nope", headers: {} }, { random: () => 0.5 })
+    expect(obj(missing.body)["message"]).toBe("No route matches GET /nope.")
+    const forced = resolve({ version: 1, table, data }, { latencyMs: 0, jitter: 0, errorRate: 0 }, { method: "GET", pathname: "/customers", headers: { "x-loutre-status": "503" } }, { random: () => 0.5 })
+    expect(obj(forced.body)["message"]).toBe("Service temporarily unavailable.")
+  })
+
+  it("sans langue demandée : le français, comme les mocks d'avant", async () => {
+    const data = generateSync(await tableOf(shop), { seed: "langue", now: NOW })
+    expect(data.locale).toBe("fr")
+    const customer = arr(data.bodies["get:/customers"]?.["200"])[0]!
+    expect(String(customer["phone"])).toMatch(/^\+33 /)
+    expect(obj(customer["address"])["country"]).toBe("France")
+    expect(PAYMENT_FAILURES).toContain(arr(data.bodies["get:/charges"]?.["200"])[0]!["failure_message"])
   })
 })

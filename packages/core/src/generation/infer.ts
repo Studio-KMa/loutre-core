@@ -23,6 +23,8 @@ export type Semantic =
   | "title"
   | "sentence"
   | "paragraph"
+  /** Why a payment or an operation failed (`failure_message`, `decline_reason`). */
+  | "failure-reason"
   | "street"
   | "city"
   | "zip"
@@ -344,6 +346,9 @@ export const infer = (name: string, shape: DataShape, ctx: InferContext): Semant
     return "token"
   }
   if (isString && has("password", "passwd", "pwd", "motdepasse")) return "password"
+  if (isString && has("failure", "failed", "decline", "declined", "rejection", "rejected", "refusal", "echec", "refus") && has("message", "msg", "reason", "description", "detail", "details", "text", "motif", "raison")) {
+    return "failure-reason"
+  }
   if (isString && has("description", "summary", "bio", "about", "content", "body", "text", "message", "comment", "note", "notes", "excerpt", "abstract", "remark", "remarks", "details", "detail", "commentaire", "resume", "caption", "reason", "explanation", "feedback", "review", "answer", "question", "alt", "transcript", "legende")) {
     return has("body", "content", "text", "description", "bio", "about", "abstract", "transcript", "explanation") ? "paragraph" : "sentence"
   }

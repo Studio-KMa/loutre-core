@@ -289,6 +289,8 @@ export const MockData = Schema.Struct({
   sources: Schema.Record(Schema.String, Schema.String),
   /** Items per collection when the default ones made the data too heavy (`generateCompact`). */
   collectionSize: Schema.optionalKey(Schema.Number),
+  /** Language of the data and of the error bodies served with it; French when absent (mocks made before the choice). */
+  locale: Schema.optionalKey(Schema.Literals(["fr", "en"])),
 })
 export type MockData = typeof MockData.Type
 

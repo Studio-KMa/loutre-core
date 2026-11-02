@@ -5,15 +5,16 @@
 import { readdir, readFile, stat } from "node:fs/promises"
 import { watch } from "node:fs"
 import { join } from "node:path"
-import { analyseToResult, generateCompact, randomSeed, sanitizeSpec, type MockDefinition } from "@loutre-run/core"
+import { analyseToResult, generateCompact, randomSeed, sanitizeSpec, type DataLocale, type MockDefinition } from "@loutre-run/core"
 import { createMockServer } from "./server"
 
 const USAGE = `loutre : une API mock depuis un schéma OpenAPI 3.x, Swagger 2.0, des types TypeScript, une collection Postman, Insomnia ou Bruno, un fichier HAR, un db.json, des commandes curl ou un schéma GraphQL
 
-  loutre serve <schéma> [--port 4000] [--host 127.0.0.1] [--seed <seed>] [--watch] [--no-state]
-  loutre push  <schéma> [--seed <seed>] [--token la_…] [--api https://api.loutre.app]
+  loutre serve <schéma> [--port 4000] [--host 127.0.0.1] [--seed <seed>] [--locale fr|en] [--watch] [--no-state]
+  loutre push  <schéma> [--seed <seed>] [--locale fr|en] [--token la_…] [--api https://api.loutre.app]
 
 <schéma> est un fichier, ou le dossier d'une collection Bruno (ses fichiers .bru).
+Les données sont en français sur un système en français, en anglais sinon ; --locale choisit.
 Le mock n'écoute que cette machine ; --host 0.0.0.0 l'ouvre au réseau local.
 
 Par requête : x-loutre-status, x-loutre-delay, x-loutre-count, x-loutre-message, x-loutre-seed.
@@ -86,7 +87,16 @@ const readSpec = async (file: string): Promise<string> => {
   return [collectionMeta(await readFile(join(file, "bruno.json"), "utf8").catch(() => "")), ...texts].join("\n\n")
 }
 
-const compile = async (file: string, seed: string): Promise<MockDefinition> => {
+/** Language of the data: `--locale`, else the system's (`LC_ALL`, `LANG`), French on a French system and English otherwise. */
+const localeOf = (flags: Args["flags"]): DataLocale => {
+  const asked = flagText(flags, "locale")
+  if (asked === "fr" || asked === "en") return asked
+  if (asked !== undefined) return fatal(`--locale vaut fr ou en, pas « ${asked} ».`)
+  const system = process.env["LC_ALL"] ?? process.env["LANG"] ?? ""
+  return system.toLowerCase().startsWith("fr") ? "fr" : "en"
+}
+
+const compile = async (file: string, seed: string, locale: DataLocale): Promise<MockDefinition> => {
   const spec = await readSpec(file)
   const analysed = await analyseToResult(spec)
   if (!analysed.ok) {
@@ -95,7 +105,7 @@ const compile = async (file: string, seed: string): Promise<MockDefinition> => {
     )
     return fatal(`Le schéma n'a pas pu être lu :\n${lines.join("\n")}`)
   }
-  return { version: 1, table: analysed.table, data: generateCompact(analysed.table, { seed }) }
+  return { version: 1, table: analysed.table, data: generateCompact(analysed.table, { seed, locale }) }
 }
 
 const serve = async (file: string, flags: Args["flags"]): Promise<void> => {
@@ -104,7 +114,8 @@ const serve = async (file: string, flags: Args["flags"]): Promise<void> => {
   const host = flagText(flags, "host") ?? "127.0.0.1"
   const seed = flagText(flags, "seed") ?? randomSeed()
   const stateful = flags["no-state"] !== true
-  const mock = await compile(file, seed)
+  const locale = localeOf(flags)
+  const mock = await compile(file, seed, locale)
   const instance = createMockServer(mock, { stateful, log: (line) => console.log(`  ${line}`) })
   instance.server.listen(port, host, () => {
     console.log(`\nloutre · ${mock.table.info.title} · seed ${seed}${stateful ? "" : " · écritures non conservées"}\n`)
@@ -123,7 +134,7 @@ const serve = async (file: string, flags: Args["flags"]): Promise<void> => {
     watch(file, { recursive }, () => {
       clearTimeout(timer)
       timer = setTimeout(() => {
-        void compile(file, seed).then((next) => {
+        void compile(file, seed, locale).then((next) => {
           instance.replace(next)
           console.log("  schéma rechargé")
         })
@@ -142,6 +153,7 @@ const push = async (file: string, flags: Args["flags"]): Promise<void> => {
   const body: Record<string, unknown> = { spec }
   const seed = flagText(flags, "seed")
   if (seed !== undefined) body["seed"] = seed
+  body["locale"] = localeOf(flags)
   const response = await fetch(`${api}/mocks`, { method: "POST", headers, body: JSON.stringify(body) }).catch(() => fatal(`Impossible de joindre ${api}.`))
   const payload = (await response.json().catch(() => ({}))) as {
     message?: string
